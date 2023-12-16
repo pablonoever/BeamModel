@@ -1,0 +1,89 @@
+! Due to the definition of ANSYS ASEC Crosssections, the longitudinal direction of the blade is in X direction 
+! and the X-Y plane of the cross section corresponds to the Y-Z-plane. Hence the crossection is rotated by 90°
+! This has to be taken into acount when applying flap or edgewise loading as these are also changed in coordinates
+
+
+/clear,nostart
+
+n = 5
+
+*DIM, A, ARRAY, n, 14
+*vread,A(1,1),test2,txt,,JIK,14,n,,1
+(14F)
+
+/Prep7
+
+! element type
+ET,        1,188
+KEYOP,        1, 2,        1 !classic beam theory
+KEYOP,        1, 3,        2 !quadratic shape functions
+KEYOP,        1, 6,        3 !Output control
+Type,1
+
+*DO,idx,1,n
+
+    ! Define Geometry
+    K,idx,A(idx,1),0,0
+
+
+
+    !Materials
+    MP,EX,idx, A(idx,8)
+    MP,GYZ,idx, A(idx,9)
+    MP,PRXY,idx, A(idx,10)
+    MP,DENS,idx, A(idx,2)/A(idx,3)
+
+
+    SECTYPE,idx,BEAM,ASEC,CS%idx%
+    SECDATA,A(idx,3),A(idx,11),A(idx,13),A(idx,12),,A(idx,14),A(idx,4),A(idx,5),A(idx,6),A(idx,7)
+
+
+    !SECTYPE,3,TAPER,,TAPERED_CS1_CS2
+    !SECDATA,1,5,0,0
+    !SECDATA,2,10,0,0
+
+    *IF,idx,GT,1,THEN
+
+        !Meshing
+        L,idx-1,idx,15
+        SECNUM,idx-1
+        MAT,idx-1
+        LMESH,idx-1
+
+
+    *ENDIF
+
+*ENDDO
+
+
+DK,1,ALL,0
+FK,idx,FY,-0.01
+
+/SOLU
+DTRAN
+ANTYPE,2
+MXPAND,10, , ,0 
+MODOPT,LANB,10,0,0, ,OFF
+
+SOLVE  
+
+
+/POST1
+/OUTPUT,Output,txt,,APPEND
+SET,LIST
+/OUTPUT
+
+/SOLU
+FTRAN
+ANTYPE,0
+SOLVE
+
+/POST1
+SET,FIRST
+NSEL,S,LOC,X,A(n,1),A(n,1)+1
+/OUTPUT,Output,txt,,APPEND
+PRNSOL,U,Y
+/OUTPUT
+NSEL,ALL
+
+
